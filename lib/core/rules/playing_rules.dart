@@ -86,6 +86,20 @@ bool _tryTransformCards(
   if (cards.length != 5 || ((typeNum[1] ?? 0) != 5 && jokerNum == 0)) {
     return (type: CardType.illegalType, keyCard: 0);
   }
+
+  // 特判：A2345 顺子（无赖子），key 牌为 5
+  if (jokerNum == 0) {
+    final s = cards.toSet();
+    if (s.length == 5 &&
+        s.contains(14) &&
+        s.contains(5) &&
+        s.contains(4) &&
+        s.contains(3) &&
+        s.contains(2)) {
+      return (type: CardType.straight, keyCard: 5);
+    }
+  }
+
   if (cards[jokerNum] - cards.last + 1 > 5) {
     return (type: CardType.illegalType, keyCard: 0);
   }
@@ -192,24 +206,32 @@ bool _tryTransformCards(
   final triplePairNum = cards.length ~/ 5;
   if (triplePairNum > 12) return (type: CardType.illegalType, keyCard: 0);
 
-  // 特判：无王、牌型为「两连对 + 一个四张」，例如 4455666777，
-  // 也视为飞机（两连三带两对），key 牌取最大点数（这里为 7）。
+  // 特判：无王、牌型为「两连三带两对」，例如 445566667777（44 55 666 777），
+  // 也视为飞机，key 牌取最大点数（这里为 7）。
   if (jokerNum == 0) {
     final normalRanks = cardNum.entries
         .where((e) => e.key >= 3 && e.key <= 15 && e.value > 0)
         .toList();
-    if (normalRanks.length == 3) {
+    if (normalRanks.length == 4) {
       normalRanks.sort((a, b) => a.key.compareTo(b.key));
       final r0 = normalRanks[0].key;
       final r1 = normalRanks[1].key;
       final r2 = normalRanks[2].key;
+      final r3 = normalRanks[3].key;
       final c0 = normalRanks[0].value;
       final c1 = normalRanks[1].value;
       final c2 = normalRanks[2].value;
-      final counts = [c0, c1, c2]..sort();
-      // 三个点数连续，且数量是 {2,2,4}（如 4,4,5,5,6,6,7,7,7,7）
-      if (r1 == r0 + 1 && r2 == r1 + 1 && counts[0] == 2 && counts[1] == 2 && counts[2] == 4) {
-        return (type: CardType.flight, keyCard: r2);
+      final c3 = normalRanks[3].value;
+      final counts = [c0, c1, c2, c3]..sort();
+      // 四个点数连续，且数量是 {2,2,3,3}（如 4,4,5,5,6,6,6,7,7,7）
+      if (r1 == r0 + 1 &&
+          r2 == r1 + 1 &&
+          r3 == r2 + 1 &&
+          counts[0] == 2 &&
+          counts[1] == 2 &&
+          counts[2] == 3 &&
+          counts[3] == 3) {
+        return (type: CardType.flight, keyCard: r3);
       }
     }
   }
@@ -415,15 +437,46 @@ bool ifNotFirstInputLegal(List<int> userInput, List<int> lastPlayedCards) {
   if (lastIfBomb != 0 && ifBomb == 0) return false;
   if (lastIfBomb == 0 && ifBomb != 0) return true;
   if (lastIfBomb != 0 && ifBomb != 0) {
-    if ((lastIfBomb > ifBomb && cardLen < 9) || (lastIfBomb < ifBomb && lastCardLen > 8)) {
-      return false;
+    // 两个都是炸弹的比较逻辑
+
+    // 9 张及以上的炸弹：张数优先，其次比较点数（与文档中“9×3 最大炸弹”一致）
+    if (cardLen >= 9 || lastCardLen >= 9) {
+      if (lastCardLen > cardLen) return false;
+      if (lastCardLen < cardLen) return true;
+      return keyCard > lastKeyCard;
     }
-    if ((lastIfBomb > ifBomb && cardLen > 8) || (lastIfBomb < ifBomb && lastCardLen < 9)) {
-      return true;
+
+    final lastIsJoker =
+        lastTypeCard == CardType.blackJokerBomb || lastTypeCard == CardType.redJokerBomb;
+    final curIsJoker =
+        typeCard.type == CardType.blackJokerBomb || typeCard.type == CardType.redJokerBomb;
+
+    // 普通炸弹之间（均非王炸，且张数 <= 8）：张数多的大；张数相同看点数
+    if (!lastIsJoker && !curIsJoker) {
+      if (lastCardLen > cardLen) return false;
+      if (lastCardLen < cardLen) return true;
+      return keyCard > lastKeyCard;
     }
-    if (lastCardLen > cardLen) return false;
-    if (lastCardLen < cardLen) return true;
-    return keyCard > lastKeyCard;
+
+    // 都是王炸：允许大王炸压小王炸，其它情况仍按张数 / 点数比较
+    if (lastIsJoker && curIsJoker) {
+      if (lastCardLen > cardLen) return false;
+      if (lastCardLen < cardLen) return true;
+
+      // 同为 4 张时，大王炸 > 小王炸
+      if (lastTypeCard == CardType.redJokerBomb &&
+          typeCard.type == CardType.blackJokerBomb) {
+        return false;
+      }
+      if (lastTypeCard == CardType.blackJokerBomb &&
+          typeCard.type == CardType.redJokerBomb) {
+        return true;
+      }
+      return keyCard > lastKeyCard;
+    }
+
+    // 一方为王炸、一方为普通炸弹，且张数都 <= 8：互相不能压（需要依靠 9 张以上的超大炸弹打破）
+    return false;
   }
 
   if (lastCardLen != cardLen) return false;

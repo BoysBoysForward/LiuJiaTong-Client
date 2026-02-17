@@ -1,98 +1,222 @@
-# Game Rules (LiuJiaTong / 六家统)
+# 游戏规则（六家统 / LiuJiaTong）
 
-## 1. Basic Rules
+## 1. 基本规则
 
-- At the start of the game, the system deals cards. Each player receives **36 cards**.
-- During the game, players try to score points and be the first to play out all their cards.
-- The game ends when:
-  - Only one player has cards left, or
-  - One side has played out all their cards.
-- Final scores are calculated based on points won by each side.
+- 游戏开始时，系统发牌。每位玩家获得 **36 张牌**。
+- 游戏过程中，玩家尝试得分并率先出完所有手牌。
+- 游戏结束条件：
+  - 只剩一名玩家还有手牌，或
+  - 一方所有玩家都已出完手牌。
+- 最终得分根据每方获得的分数计算。
 
-## 2. Scoring Cards
+## 2. 分数牌
 
-- **5** = 5 points
-- **10** = 10 points
-- **K** = 10 points
-- In each round, the player who plays the strongest combination wins all scoring cards (5, 10, K) played in that round.
+- **5** = 5 分
+- **10** = 10 分
+- **K** = 10 分
+- 每轮中，打出最强牌型的玩家获得该轮所有分数牌（5、10、K）的分数。
 
-## 3. Card Types
+## 3. 牌型
 
-### 3.1 Single
+### 3.1 单张
 
-- Any single card.
+- 任意一张牌。
 
-### 3.2 Pair
+### 3.2 对子
 
-- Two cards of the same rank, regardless of suit.
+- 两张相同点数的牌，花色不限。
 
-### 3.3 Straight Pairs (Consecutive Pairs)
+### 3.3 连对（连续对子）
 
-- Two or more consecutive pairs, e.g. 4455, 445566.
-- **AA22** is allowed (minimum straight pairs).
-- **AA223344...KKAA** is **not** allowed (A cannot wrap around both ends).
-- When A is used as low, it counts as 1 (e.g. A2345). When A is used as high, it counts as A (e.g. ...KAA).
+- 两个或更多连续的对子，例如 4455、445566。
+- **AA22** 允许（最小连对）。
+- **AA223344...KKAA** **不允许**（A 不能同时作为最小和最大）。
+- 当 A 作为小牌使用时，计为 1（例如 A2345）。当 A 作为大牌使用时，计为 A（例如 ...KAA）。
 
-### 3.4 Triple
+### 3.4 三张
 
-- Three cards of the same rank, regardless of suit.
+- 三张相同点数的牌，花色不限。
 
-### 3.5 Straight Triples (Consecutive Triples)
+### 3.5 连三（连续三张）
 
-- Two or more consecutive triples, e.g. 333444, 444555666.
-- **AAA222** and **AAA222333** are allowed.
+- 两个或更多连续的三张，例如 333444、444555666。
+- **AAA222** 和 **AAA222333** 允许。
 
-### 3.6 Flight (Butterfly)
+### 3.6 飞机（蝴蝶）
 
-- Straight triples with matching consecutive pairs attached.
-- Example: 444555666JJQQKK; AAA222333JJQQKK.
-- **AAAKKKQQQ3322AA** can be interpreted as a valid Flight.
-- Size is determined by the straight triples part.
+- 连续三张带相同数量的连续对子。
+- 例如：444555666JJQQKK；AAA222333JJQQKK。
+- **AAAKKKQQQ3322AA** 可解释为有效的飞机。
+- 大小由连续三张部分决定。
 
-### 3.7 Straight
+### 3.7 顺子
 
-- Exactly **five** consecutive cards, e.g. 45678.
-- **A2345** is allowed (A as 1).
+- 恰好 **五张** 连续的单牌，例如 45678。
+- **A2345** 允许（A 作为 1）。
 
-### 3.8 Three with a Pair (Triple Pair)
+### 3.8 三带二（三张带一对）
 
-- Three of a kind plus a pair (5 cards total).
-- Example: AAA + BB.
+- 三张相同点数加一对（共 5 张）。
+- 例如：AAA + BB。
 
-### 3.9 Bomb
+### 3.9 炸弹
 
-- Four or more cards of the same rank, e.g. 4444, 55555.
+- 四张或更多相同点数的牌，例如 4444、55555。
 
-## 4. Jokers (Wild Cards)
+## 4. 赖子（大小王）
 
-- Both **Big Joker** and **Small Joker** act as wild cards (财神).
-- A Joker can substitute any card to form a valid combination.
-- Example: Big Joker + 222 = 2222.
-- Big Joker and Small Joker **cannot** substitute for each other.
-- Special case: **888 + Small Joker + Small Joker** = bomb of five 8s (not triple with jokers).
+- **大王**和**小王**都作为赖子（财神）。
+- 赖子可以替代任意牌组成有效牌型。
+- 例如：大王 + 222 = 2222。
+- 大王和小王**不能**互相替代。
+- 特殊情况：**888 + 小王 + 小王** = 五张 8 的炸弹（不是三张带赖子）。
 
-## 5. Card Rank (Highest to Lowest)
+## 5. 牌点大小（从大到小）
 
-- **Big Joker** > **Small Joker** > **2** > **A** > **K** > **Q** > **J** > **10** > **9** > **8** > **7** > **6** > **5** > **4** > **3**
+- **大王** > **小王** > **2** > **A** > **K** > **Q** > **J** > **10** > **9** > **8** > **7** > **6** > **5** > **4** > **3**
 
-## 6. Comparing Card Types
+## 6. 牌型比较
 
-- **Pairs and Triples**: Compared by the rank of the main cards.
-- **Straight Pairs, Straight Triples, Straights**: Compared by the highest card, provided the number of cards is the same. Different lengths cannot be compared.
-- **Flight**: Compared by the straight triples part.
-- **Bombs**: Compared by rank if they have the same number of cards; otherwise, more cards = stronger.
-  - Bombs beat all non-bomb types.
-  - **8×2** (eight 2s) < **4 Small Jokers** < **4 Big Jokers** < **9×3** (nine 3s).
-- When used as wild cards, Big Joker and Small Joker do not differ in rank (e.g. 333+Big Joker = 333+Small Joker).
+- **对子和三张**：按主牌点数比较。
+- **连对、连三、顺子**：在张数相同的情况下，按最大牌比较。不同长度不能比较。
+- **飞机**：按连续三张部分比较。
+- **炸弹**：张数相同时按点数比较；张数不同时，张数多的更大。
+  - 炸弹可以压所有非炸弹牌型。
+  - **8×2**（八张 2）< **4 张小王** < **4 张大王** < **9×3**（九张 3）。
+- 当用作赖子时，大王和小王在点数上无区别（例如 333+大王 = 333+小王）。
 
-## 7. Playing Rules
+## 7. 出牌规则
 
-- **First round**: The system randomly chooses one player to lead.
-- **Later rounds**: The player who led in the previous round leads again.
-- Six players take turns **counter-clockwise**.
-- Each player must play a combination **stronger** than the previous one, or **pass**.
-- If a player has no valid play or chooses not to play, they pass.
-- If all other players pass, the last player who played may lead with a new combination.
-- When a player plays their last hand and all others pass, the **next player** (counter-clockwise) leads.
-- Jokers can substitute any card to form valid combinations, but Big Joker and Small Joker cannot substitute each other.
-- Scoring cards (5, 10, K) played in a round are awarded to the player who wins that round.
+- **首轮**：系统随机选择一名玩家先出。
+- **后续轮次**：上一轮先出的玩家继续先出。
+- 六名玩家按**逆时针**顺序出牌。
+- 每位玩家必须打出**比上一家更强**的牌型，或**过牌**。
+- 如果玩家没有有效出牌或选择不出，则过牌。
+- 如果其他所有玩家都过牌，最后出牌的玩家可以重新先出。
+- 当玩家出完最后一手牌且其他人都过牌时，**下一位玩家**（逆时针）先出。
+- 赖子可以替代任意牌组成有效牌型，但大王和小王不能互相替代。
+- 每轮中打出的分数牌（5、10、K）归该轮获胜的玩家所有。
+
+## 8. 规则测试原则
+
+编写规则测试时，应遵循以下原则以确保测试覆盖的完整性：
+
+### 8.1 普通牌型测试
+
+必须测试所有九种基本牌型：
+
+1. **单张**（single）
+2. **对子**（pair）
+3. **三张**（triple）
+4. **三带二**（triplePair）
+5. **顺子**（straight）- 恰好五张
+6. **连对**（straightPairs）
+7. **连三**（straightTriples）
+8. **飞机**（flight）
+9. **炸弹**（normalBomb）- 四张或更多相同点数
+
+每种牌型应测试：
+
+- 合法牌型的识别
+- 关键牌（keyCard）的正确提取
+- 牌型大小的比较
+
+### 8.2 含一张赖子的牌型测试
+
+必须测试每种牌型在含一张赖子（大王或小王）时的识别：
+
+- 单张 + 赖子（应识别为对子）
+- 对子 + 赖子（应识别为三张）
+- 三张 + 赖子（应识别为炸弹）
+- 三带二 + 赖子（各种组合）
+- 顺子 + 赖子（替代任意位置）
+- 连对 + 赖子（替代对子中的任意牌）
+- 连三 + 赖子（替代三张中的任意牌）
+- 飞机 + 赖子（替代三张或对子部分）
+- 炸弹 + 赖子（增加炸弹张数）
+
+### 8.3 含多张赖子的牌型优先级判断测试
+
+根据 `playing_rules.dart` 中的实现，炸弹类型的优先级判断规则如下：
+
+#### 炸弹类型优先级
+
+1. **普通炸弹**（normalBomb，value = 1）：四张或更多相同点数的普通牌
+2. **小王炸弹**（blackJokerBomb，value = 2）：四张小王
+3. **大王炸弹**（redJokerBomb，value = 3）：四张大王
+
+优先级：普通炸弹 < 小王炸弹 < 大王炸弹
+
+#### 炸弹比较规则
+
+当比较两个炸弹时：
+
+1. **类型不同时的规则**：
+
+   - 如果上家炸弹类型更高（lastIfBomb > ifBomb）：
+     - 当前炸弹张数 < 9：**不能压**（返回 false）
+     - 当前炸弹张数 > 8：**可以压**（返回 true）
+   - 如果当前炸弹类型更高（ifBomb > lastIfBomb）：
+     - 上家炸弹张数 > 8：**不能压**（返回 false）
+     - 上家炸弹张数 < 9：**可以压**（返回 true）
+2. **类型相同或都是普通炸弹时的规则**：
+
+   - 张数多的炸弹可以压张数少的炸弹
+   - 张数相同时，比较关键牌（keyCard），关键牌大的可以压关键牌小的
+   - 带赖子的炸弹，关键牌应为普通牌而不是大小王
+
+#### 必须测试的优先级场景
+
+1. **普通炸弹之间的比较**：
+
+   - 不同张数（如 4 张 vs 5 张）
+   - 相同张数不同点数（如 4 张 A vs 4 张 K）
+2. **小王炸弹与普通炸弹的比较**：
+
+   - 4 张小王 vs 4-8 张普通炸弹（不能压）
+   - 4 张小王 vs 9+ 张普通炸弹（可以压）
+   - 5+ 张普通炸弹 vs 4 张小王（不能压）
+   - 9+ 张普通炸弹 vs 4 张小王（可以压）
+3. **大王炸弹与普通炸弹的比较**：
+
+   - 4 张大王 vs 4-8 张普通炸弹（不能压）
+   - 4 张大王 vs 9+ 张普通炸弹（可以压）
+   - 5+ 张普通炸弹 vs 4 张大王（不能压）
+   - 9+ 张普通炸弹 vs 4 张大王（可以压）
+4. **大王炸弹与小王炸弹的比较**：
+
+   - 4 张大王 vs 4 张小王（可以压）
+   - 4 张小王 vs 4 张大王（不能压）
+5. **多张赖子炸弹的特殊情况**：
+
+   - 5 张相同点数 + 1 张赖子 = 6 张炸弹
+   - 3 张相同点数 + 2 张赖子 = 5 张炸弹
+   - 测试赖子炸弹与普通炸弹的优先级比较
+
+#### 测试示例
+
+```dart
+// 测试：4 张小王不能压 4 张普通炸弹
+test('小王炸弹不能压普通炸弹（张数 < 9）', () {
+  final lastPlayed = [14, 14, 14, 14]; // 4 张 A
+  final userInput = [16, 16, 16, 16]; // 4 张小王
+  final result = ifNotFirstInputLegal(userInput, lastPlayed);
+  expect(result, false);
+});
+
+// 测试：9 张普通炸弹可以压 4 张小王
+test('9 张普通炸弹可以压小王炸弹', () {
+  final lastPlayed = [16, 16, 16, 16]; // 4 张小王
+  final userInput = [14, 14, 14, 14, 14, 14, 14, 14, 14]; // 9 张 A
+  final result = ifNotFirstInputLegal(userInput, lastPlayed);
+  expect(result, true);
+});
+```
+
+### 8.4 边界情况测试
+
+- 最小连对：AA22
+- 最大连对：KKAA
+- 最小连三：AAA222
+- 特殊飞机：AAAKKKQQQ3322AA
+- 赖子替代的边界情况（如 888 + 2 张小王 = 炸弹）
