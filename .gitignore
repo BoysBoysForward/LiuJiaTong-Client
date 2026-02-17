@@ -1,0 +1,191 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# Python相关
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
+**/venv/
+**/env/
+**/ENV/
+**/env.bak/
+**/venv.bak/
+**/pythonenv*
+client/__pycache__/
+core/__pycache__/
+network/__pycache__/
+
+# IDE - 添加更多IDE相关
+.vscode/
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/**/usage.statistics.xml
+.idea/**/dictionaries
+.idea/**/shelf
+.idea/**/contentModel.xml
+.idea/**/dataSources/
+.idea/**/dataSources.ids
+.idea/**/dataSources.local.xml
+.idea/**/sqlDataSources.xml
+.idea/**/dynamic.xml
+.idea/**/uiDesigner.xml
+.idea/**/gradle.xml
+.idea/**/libraries
+*.iws
+*.ipr
+
+# Android Studio/Gradle
+android/.gradle/
+android/.kotlin/
+android/app/debug/
+android/app/profile/
+android/app/release/
+android/local.properties
+android/**/generated/
+android/**/build/
+android/captures/
+android/.idea/**
+
+# iOS/macOS
+ios/Flutter/flutter_export_environment.sh
+ios/Flutter/Generated.xcconfig
+ios/Flutter/ephemeral/
+ios/**/xcuserdata/
+ios/**/DerivedData/
+macos/Flutter/ephemeral/
+macos/**/xcuserdata/
+macos/**/DerivedData/
+
+# Windows
+windows/flutter/ephemeral/
+windows/runner/x64/
+windows/runner/Debug/
+windows/runner/Release/
+windows/**/Generated Files/
+
+# Linux
+linux/flutter/ephemeral/
+linux/runner/x64/
+linux/runner/Debug/
+linux/runner/Release/
+
+# Web
+web/index.html
+web/**/*.js.map
+web/**/*.js.tar.gz
+web/**/*.dart.js
+web/**/main.dart.js
+web/**/flutter_service_worker.js
+
+# Assets/Cache
+assets/cache/
+assets/tmp/
+**/temp/
+**/tmp/
+
+# Logs
+*.log
+**/logs/
+core/log/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+*.env
+
+# Secrets/Keys
+*.key
+*.pem
+*.p12
+*.pfx
+secrets/
+keys/
+
+# Test coverage
+coverage/
+test/.test_runner/
+test/**/coverage/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Package manager
+.pub/
+.pub-cache/
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.flutter-plugins-dependencies.bak
+packages/pubspec.lock
+
+# Application specific
+*.iml
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# Uploads
+uploads/
+media/
+storage/
+
+# Debug files
+app.*.symbols
+app.*.map.json
+*.dSYM/
+*.dSYM.zip
