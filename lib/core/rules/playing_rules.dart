@@ -20,6 +20,7 @@ enum CardType {
 }
 
 /// 统计 list 中每个元素出现次数
+/// 返回一个 Map，键为牌值，值为出现次数
 Map<int, int> _counter(List<int> list) {
   final m = <int, int>{};
   for (final x in list) {
@@ -72,8 +73,15 @@ bool _tryTransformCards(
     return (type: CardType.normalBomb, keyCard: normalBombKeyCard);
   }
   if (spTypeNum != 0) return (type: CardType.illegalType, keyCard: 0);
-  if ((cardNum[16] ?? 0) == 4) return (type: CardType.blackJokerBomb, keyCard: 16);
-  if ((cardNum[17] ?? 0) == 4) return (type: CardType.redJokerBomb, keyCard: 17);
+  
+  // 小王炸里面不能混合大王
+  if ((cardNum[16] ?? 0) == 4 && (cardNum[17] ?? 0) == 0) return (type: CardType.blackJokerBomb, keyCard: 16);
+
+  // 大王炸里面不能混合小王
+  if ((cardNum[17] ?? 0) == 4 && (cardNum[16] ?? 0) == 0) return (type: CardType.redJokerBomb, keyCard: 17);
+
+  // 混合大小王视为2炸
+  if ((cardNum[16] ?? 0) != 4 && (cardNum[17] ?? 0) != 4) return (type: CardType.normalBomb, keyCard: 15);
   return (type: CardType.illegalType, keyCard: 0);
 }
 
@@ -99,6 +107,9 @@ bool _tryTransformCards(
       return (type: CardType.straight, keyCard: 5);
     }
   }
+
+  // 全赖子时 cards[jokerNum] 越界，顺子需至少一张普通牌确定范围
+  if (jokerNum >= cards.length) return (type: CardType.illegalType, keyCard: 0);
 
   if (cards[jokerNum] - cards.last + 1 > 5) {
     return (type: CardType.illegalType, keyCard: 0);
@@ -159,10 +170,26 @@ bool _tryTransformCards(
   Map<int, int> cardNum,
   int jokerNum,
 ) {
+  // 三连至少需要6张牌，且必须是3的倍数
   if (cards.length < 6 || cards.length % 3 != 0) {
     return (type: CardType.illegalType, keyCard: 0);
   }
   final triplesNum = cards.length ~/ 3;
+  // 特判：AAA222（无赖子），key 牌为 2，与 AA22 连对约定一致
+  if (triplesNum == 2 && jokerNum == 0) {
+    final aCnt = cardNum[14] ?? 0;
+    final twoCnt = cardNum[15] ?? 0;
+    bool hasOtherRank = false;
+    for (final k in cardNum.keys) {
+      if (k >= 3 && k <= 15 && k != 14 && k != 15) {
+        hasOtherRank = true;
+        break;
+      }
+    }
+    if (!hasOtherRank && aCnt == 3 && twoCnt == 3) {
+      return (type: CardType.straightTriples, keyCard: 2);
+    }
+  }
   if (triplesNum > 12 || cards[jokerNum] - cards.last + 1 > triplesNum) {
     return (type: CardType.illegalType, keyCard: 0);
   }
@@ -197,45 +224,48 @@ bool _tryTransformCards(
 
 ({CardType type, int keyCard}) _ifFlight(
   List<int> cards,
-  Map<int, int> cardNum,
-  int jokerNum,
+  Map<int, int> cardNum, // key 为牌值，value 为出现次数
+  int jokerNum, // 大小王数量
 ) {
+  // 飞机至少需要10张牌，且必须是5的倍数
   if (cards.length < 10 || cards.length % 5 != 0) {
     return (type: CardType.illegalType, keyCard: 0);
   }
   final triplePairNum = cards.length ~/ 5;
   if (triplePairNum > 12) return (type: CardType.illegalType, keyCard: 0);
 
-  // 特判：无王、牌型为「两连三带两对」，例如 445566667777（44 55 666 777），
-  // 也视为飞机，key 牌取最大点数（这里为 7）。
+  // 普通飞机
   if (jokerNum == 0) {
-    final normalRanks = cardNum.entries
-        .where((e) => e.key >= 3 && e.key <= 15 && e.value > 0)
+    // 先将卡牌按数量归类，确保只有连三的和连二的
+    final typeNum = _typeNum(cardNum);
+    if (typeNum.length != 2) return (type: CardType.illegalType, keyCard: 0);
+    if (typeNum[3] != typeNum[2]) return (type: CardType.illegalType, keyCard: 0);
+
+    // 连二的点数必须连续，例如3344,4455，不能是3355,4466
+    final straightPairs = cardNum.entries
+        .where((e) => e.key >= 3 && e.key <= 15 && e.value == 2)
         .toList();
-    if (normalRanks.length == 4) {
-      normalRanks.sort((a, b) => a.key.compareTo(b.key));
-      final r0 = normalRanks[0].key;
-      final r1 = normalRanks[1].key;
-      final r2 = normalRanks[2].key;
-      final r3 = normalRanks[3].key;
-      final c0 = normalRanks[0].value;
-      final c1 = normalRanks[1].value;
-      final c2 = normalRanks[2].value;
-      final c3 = normalRanks[3].value;
-      final counts = [c0, c1, c2, c3]..sort();
-      // 四个点数连续，且数量是 {2,2,3,3}（如 4,4,5,5,6,6,6,7,7,7）
-      if (r1 == r0 + 1 &&
-          r2 == r1 + 1 &&
-          r3 == r2 + 1 &&
-          counts[0] == 2 &&
-          counts[1] == 2 &&
-          counts[2] == 3 &&
-          counts[3] == 3) {
-        return (type: CardType.flight, keyCard: r3);
-      }
+    for (int i = 0; i < straightPairs.length - 1; i++) {
+      if (straightPairs[i].key != straightPairs[i + 1].key + 1) return (type: CardType.illegalType, keyCard: 0);
     }
+
+    // 连三的点数必须连续，例如333444,444555，不能是333555,444666
+    final straightTriples = cardNum.entries
+        .where((e) => e.key >= 3 && e.key <= 15 && e.value == 3)
+        .toList();
+    for (int i = 0; i < straightTriples.length - 1; i++) {
+      if (straightTriples[i].key != straightTriples[i + 1].key + 1) return (type: CardType.illegalType, keyCard: 0);
+    }
+
+    // 如果key牌为2，则返回2，且长度不能超过2
+    if (straightTriples.first.key == 15 && straightTriples.length > 2) return (type: CardType.illegalType, keyCard: 0);
+    if (straightTriples.first.key == 15 && straightTriples.length == 2) return (type: CardType.flight, keyCard: 2);
+
+    // 返回连三的最大点数
+    return (type: CardType.flight, keyCard: straightTriples.first.key);
   }
 
+  // 含大小王的飞机
   List<int> rg;
   if (cards.last + triplePairNum - 1 > 14) {
     rg = List.generate(triplePairNum, (i) => 14 - i);
@@ -458,24 +488,14 @@ bool ifNotFirstInputLegal(List<int> userInput, List<int> lastPlayedCards) {
       return keyCard > lastKeyCard;
     }
 
-    // 都是王炸：允许大王炸压小王炸，其它情况仍按张数 / 点数比较
+    // 都是王炸：允许大王炸压小王炸
     if (lastIsJoker && curIsJoker) {
-      if (lastCardLen > cardLen) return false;
-      if (lastCardLen < cardLen) return true;
-
-      // 同为 4 张时，大王炸 > 小王炸
-      if (lastTypeCard == CardType.redJokerBomb &&
-          typeCard.type == CardType.blackJokerBomb) {
-        return false;
-      }
-      if (lastTypeCard == CardType.blackJokerBomb &&
-          typeCard.type == CardType.redJokerBomb) {
-        return true;
-      }
       return keyCard > lastKeyCard;
     }
 
-    // 一方为王炸、一方为普通炸弹，且张数都 <= 8：互相不能压（需要依靠 9 张以上的超大炸弹打破）
+    // 王炸能压8张及以下的普通炸弹
+    if (lastCardLen <= 8 && curIsJoker) return true;
+    if (cardLen <= 8 && lastIsJoker) return false;
     return false;
   }
 

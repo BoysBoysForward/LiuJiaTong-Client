@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:liujiatong/application/game_controller.dart';
 import 'package:liujiatong/application/play_result.dart';
 import 'package:liujiatong/core/auto_play/strategy.dart';
 import 'package:liujiatong/core/models/card.dart' as card_model;
@@ -8,7 +9,7 @@ import 'package:liujiatong/core/models/field_info.dart';
 import 'package:liujiatong/core/rules/playing_rules.dart' as rules;
 import 'package:liujiatong/core/utils/card_utils.dart'
     show backgroundImageAssetPath, calculateScore, calculateTeamScores, cardImageAssetPath;
-import 'package:liujiatong/application/game_controller.dart';
+import 'package:liujiatong/data/logger.dart';
 import 'package:liujiatong/data/sound/sound_service.dart';
 
 // 与 gui_flet 一致的玩家位置偏移：上1、右上下2、左上下2、下自己
@@ -103,6 +104,9 @@ class _GameScreenState extends State<GameScreen> {
   bool _autoPlayEnabled = false;
   Completer<PlayResult>? _turnCompleter;
   _GameOverResult? _gameOver;
+  final AppLogger _logger = AppLogger.instance;
+
+  bool get _isGameOver => _gameOver != null;
 
   /// 是否轮到我出牌（含首出：不依赖 startFlag，首出时也可选牌）
   bool get _isMyTurn =>
@@ -122,6 +126,9 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void initState() {
     super.initState();
+    // 每次启动牌局时创建独立日志文件
+    unawaited(_logger.init('game'));
+    _logger.info('GameScreen.initState - game started');
     _runLoop();
   }
 
@@ -159,30 +166,44 @@ class _GameScreenState extends State<GameScreen> {
         },
         useAutoPlay: false,
       );
-    } catch (_) {
+    } catch (e, st) {
+      _logger.error('runGameLoop exception: $e\n$st');
       if (!mounted) return;
       setState(() => _gameOver = _GameOverResult.error());
     }
   }
 
   void _onCardTap(int index) {
+    if (_isGameOver) return;
     // 手牌始终允许选中/取消，只要有场面信息和索引合法
     if (_info == null) return;
     if (index < 0 || index >= _selected.length) return;
-    setState(() => _selected[index] = !_selected[index]);
+    final before = _selected[index];
+    setState(() => _selected[index] = !before);
+    final card = _info!.clientCards[index];
+    _logger.info(
+      'tap_card - index=$index value=${card.value} selected=${!before}',
+    );
   }
 
   /// 双击某张手牌时：选中所有与该牌点数相同的手牌
   void _onCardDoubleTap(int index) {
+    if (_isGameOver) return;
     if (_info == null) return;
     if (index < 0 || index >= _info!.clientCards.length) return;
     if (_selected.length != _info!.clientCards.length) return;
 
     final targetValue = _info!.clientCards[index].value;
+    final isCurrentlySelected = _selected[index];
+    _logger.info(
+      'double_tap_card - index=$index value=$targetValue currentlySelected=$isCurrentlySelected',
+    );
     setState(() {
       for (var i = 0; i < _info!.clientCards.length; i++) {
         if (_info!.clientCards[i].value == targetValue) {
-          _selected[i] = true;
+          // 若双击的是已选中的牌，则把同点数的牌全部置为未选中；
+          // 若双击的是未选中的牌，则把同点数的牌全部置为选中。
+          _selected[i] = !isCurrentlySelected;
         }
       }
     });
@@ -192,9 +213,11 @@ class _GameScreenState extends State<GameScreen> {
     setState(() {
       for (var i = 0; i < _selected.length; i++) _selected[i] = false;
     });
+    _logger.info('reset_selection');
   }
 
   void _onConfirm() {
+    if (_isGameOver) return;
     if (_info == null || _turnCompleter == null || _turnCompleter!.isCompleted) return;
     final selected = <card_model.Card>[];
     for (var i = 0; i < _info!.clientCards.length && i < _selected.length; i++) {
@@ -208,14 +231,21 @@ class _GameScreenState extends State<GameScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('请选牌或点击跳过')),
       );
+      _logger.info('confirm_failed - reason=empty_selection');
       return;
     }
     if (!rules.validateUserSelectedCards(selected, _info!.clientCards, lastPlayed)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('牌型不合法')),
       );
+      _logger.info(
+        'confirm_failed - reason=invalid_cards values=${selected.map((c) => c.value).toList()}',
+      );
       return;
     }
+    _logger.info(
+      'confirm_play - values=${selected.map((c) => c.value).toList()} score=${calculateScore(selected)}',
+    );
     _turnCompleter!.complete(PlayCards(selected, calculateScore(selected)));
     setState(() {
       _turnCompleter = null;
@@ -224,6 +254,7 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _onSkip() {
+    if (_isGameOver) return;
     if (_info == null || _turnCompleter == null || _turnCompleter!.isCompleted) return;
     List<card_model.Card>? lastPlayedSkip;
     if (_info!.lastPlayer != _info!.clientId && _info!.lastPlayer >= 0) {
@@ -233,8 +264,10 @@ class _GameScreenState extends State<GameScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('首出不能跳过')),
       );
+      _logger.info('skip_failed - reason=first_round');
       return;
     }
+    _logger.info('skip_success');
     _turnCompleter!.complete(PlaySkip());
     setState(() {
       _turnCompleter = null;
@@ -243,6 +276,7 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _onToggleAutoPlay() {
+    if (_isGameOver) return;
     final next = !_autoPlayEnabled;
 
     // 打开托管时，如果当前正轮到我且有未完成的回合，立刻执行一次自动出牌/跳过
@@ -252,9 +286,13 @@ class _GameScreenState extends State<GameScreen> {
       PlayResult result;
       if (selected != null) {
         result = PlayCards(selected, calculateScore(selected));
+        _logger.info(
+          'auto_play_immediate - values=${selected.map((c) => c.value).toList()}',
+        );
       } else {
         // 托管逻辑：如果没有可出的牌，则直接跳过（与 Python 客户端一致，由服务端负责规则校验）
         result = PlaySkip();
+        _logger.info('auto_play_immediate - action=skip');
       }
       _turnCompleter!.complete(result);
       setState(() {
@@ -265,12 +303,14 @@ class _GameScreenState extends State<GameScreen> {
     } else {
       setState(() => _autoPlayEnabled = next);
     }
+    _logger.info('toggle_auto_play - enabled=$next');
   }
 
   void _playRoundSound(FieldInfo info) {
     final sound = SoundService.instance;
     if (!info.startFlag) {
       sound.playMultiple(['start', 'open']);
+      _logger.info('round_start');
       return;
     }
     final last = info.lastPlayer;
@@ -279,10 +319,12 @@ class _GameScreenState extends State<GameScreen> {
     final hisScore = info.hisNowScore;
     if (last == now && hisScore > 0) {
       sound.play('fen');
+      _logger.info('round_score - player=$last scoreDelta=$hisScore');
       return;
     }
     if (last == hisLast) {
       sound.play('pass');
+      _logger.info('round_pass - player=$last');
       return;
     }
     final played = info.usersPlayedCards[last];
@@ -298,28 +340,27 @@ class _GameScreenState extends State<GameScreen> {
     if (bombs.contains(r.type)) {
       if (played.length >= 7) {
         sound.play('bomb3');
+        _logger.info('play_bomb - player=$last len=${played.length} sound=bomb3 type=${r.type}');
       } else if (played.length >= 5) {
         sound.play('bomb2');
+        _logger.info('play_bomb - player=$last len=${played.length} sound=bomb2 type=${r.type}');
       } else {
         sound.play('bomb1');
+        _logger.info('play_bomb - player=$last len=${played.length} sound=bomb1 type=${r.type}');
       }
     } else {
       if (played.length >= 5) {
         sound.play('throw2');
+        _logger.info('play_cards - player=$last len=${played.length} sound=throw2 type=${r.type}');
       } else {
         sound.play('throw1');
+        _logger.info('play_cards - player=$last len=${played.length} sound=throw1 type=${r.type}');
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_gameOver != null) {
-      return _GameOverOverlay(
-        result: _gameOver!,
-        onExit: widget.onExit,
-      );
-    }
     final info = _info;
     if (info == null) {
       return const Scaffold(
@@ -379,6 +420,62 @@ class _GameScreenState extends State<GameScreen> {
               onPressed: widget.onExit,
               child: const Text('退出'),
             ),
+          ),
+          // 10. 游戏结束时的居中提示 + “下一把” 按钮
+          if (_isGameOver)
+            Center(
+              child: _buildGameOverCenter(layout),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// 游戏结束时的中央提示与“下一把”按钮
+  Widget _buildGameOverCenter(_GameLayoutParams layout) {
+    final result = _gameOver;
+    String message = '游戏结束';
+    if (result != null) {
+      if (result.isError) {
+        message = '对局异常结束';
+      } else if (result.weWon) {
+        message = '你的队伍获得了胜利';
+        if (result.doubleWin) message += '，并成功双统';
+      } else {
+        message = '你的队伍未能取得胜利';
+        if (result.doubleWin) message += '，并被对方双统';
+      }
+    }
+    return Container(
+      padding: EdgeInsets.all(24 * layout.scale),
+      decoration: BoxDecoration(
+        color: const Color(0xCC000000),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '游戏结束',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: (24 * layout.scale).clamp(18, 30),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(height: 12 * layout.scale),
+          Text(
+            message,
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: (16 * layout.scale).clamp(12, 22),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 24 * layout.scale),
+          FilledButton(
+            onPressed: widget.onExit,
+            child: const Text('下一把'),
           ),
         ],
       ),
@@ -543,7 +640,7 @@ class _GameScreenState extends State<GameScreen> {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // 手牌贴近窗口顶部
+          // 顶部手牌区域：对局中显示牌背，游戏结束后展示剩余手牌
           Positioned(
             top: layout.topCardY,
             left: 0,
@@ -551,13 +648,18 @@ class _GameScreenState extends State<GameScreen> {
             child: Center(
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                child: _buildOverlappingCardRow(
-                  cardCount: cardsNum.clamp(0, 36),
-                  cardHeight: layout.cardHeight,
-                  cardWidth: layout.cardWidth,
-                  cardSpacing: layout.cardSpacing,
-                  assetPath: backgroundImageAssetPath,
-                ),
+                child: _isGameOver
+                    ? _buildOverlappingPlayedRow(
+                        info.usersCards[topId],
+                        layout,
+                      )
+                    : _buildOverlappingCardRow(
+                        cardCount: cardsNum.clamp(0, 36),
+                        cardHeight: layout.cardHeight,
+                        cardWidth: layout.cardWidth,
+                        cardSpacing: layout.cardSpacing,
+                        assetPath: backgroundImageAssetPath,
+                      ),
               ),
             ),
           ),
@@ -669,13 +771,15 @@ class _GameScreenState extends State<GameScreen> {
           textColor,
           info.nowPlayer == swId,
         ),
-        // 左侧牌背 + 已出牌（该玩家出完牌后，不再显示牌背）
-        info.usersCardsNum[nwId] > 0
-            ? _buildSideCardBack(layout.horizontalCardMarginSide, layout.upperCardY, true, layout)
-            : const SizedBox.shrink(),
-        info.usersCardsNum[swId] > 0
-            ? _buildSideCardBack(layout.horizontalCardMarginSide, layout.lowerCardY, true, layout)
-            : const SizedBox.shrink(),
+        // 左侧牌背 + 已出牌（游戏中）；游戏结束后不再显示牌背，而是展示剩余手牌
+        if (!_isGameOver && info.usersCardsNum[nwId] > 0)
+          _buildSideCardBack(layout.horizontalCardMarginSide, layout.upperCardY, true, layout),
+        if (!_isGameOver && info.usersCardsNum[swId] > 0)
+          _buildSideCardBack(layout.horizontalCardMarginSide, layout.lowerCardY, true, layout),
+        if (_isGameOver)
+          _buildSideHandCards(info, nwId, layout.upperCardY, layout, true),
+        if (_isGameOver)
+          _buildSideHandCards(info, swId, layout.lowerCardY, layout, true),
         _buildSidePlayedCards(info, (cid + _posNw) % 6, layout.upperCardY, layout, true),
         _buildSidePlayedCards(info, (cid + _posSw) % 6, layout.lowerCardY, layout, true),
       ],
@@ -710,12 +814,14 @@ class _GameScreenState extends State<GameScreen> {
           textColor,
           info.nowPlayer == seId,
         ),
-        info.usersCardsNum[neId] > 0
-            ? _buildSideCardBack(layout.horizontalCardMarginSide, layout.upperCardY, false, layout)
-            : const SizedBox.shrink(),
-        info.usersCardsNum[seId] > 0
-            ? _buildSideCardBack(layout.horizontalCardMarginSide, layout.lowerCardY, false, layout)
-            : const SizedBox.shrink(),
+        if (!_isGameOver && info.usersCardsNum[neId] > 0)
+          _buildSideCardBack(layout.horizontalCardMarginSide, layout.upperCardY, false, layout),
+        if (!_isGameOver && info.usersCardsNum[seId] > 0)
+          _buildSideCardBack(layout.horizontalCardMarginSide, layout.lowerCardY, false, layout),
+        if (_isGameOver)
+          _buildSideHandCards(info, neId, layout.upperCardY, layout, false),
+        if (_isGameOver)
+          _buildSideHandCards(info, seId, layout.lowerCardY, layout, false),
         _buildSidePlayedCards(info, (cid + _posNe) % 6, layout.upperCardY, layout, false),
         _buildSidePlayedCards(info, (cid + _posSe) % 6, layout.lowerCardY, layout, false),
       ],
@@ -744,6 +850,29 @@ class _GameScreenState extends State<GameScreen> {
       right: isLeft ? null : layout.horizontalCardMarginSide + startOffset,
       top: cy,
       child: _buildOverlappingPlayedRow(played, layout),
+    );
+  }
+
+  /// 游戏结束时，侧边玩家展示剩余手牌（不再展示牌背）
+  Widget _buildSideHandCards(
+    FieldInfo info,
+    int userId,
+    double cy,
+    _GameLayoutParams layout,
+    bool isLeft,
+  ) {
+    final cards = info.usersCards[userId];
+    if (cards.isEmpty) return const SizedBox.shrink();
+    final totalWidth = layout.cardWidth + (cards.length - 1) * layout.cardSpacing;
+    return Positioned(
+      left: isLeft ? layout.horizontalCardMarginSide : null,
+      right: isLeft ? null : layout.horizontalCardMarginSide,
+      top: cy,
+      child: SizedBox(
+        width: totalWidth,
+        height: layout.cardHeight,
+        child: _buildOverlappingPlayedRow(cards, layout),
+      ),
     );
   }
 
@@ -992,53 +1121,4 @@ class _GameOverResult {
   }
 
   bool get doubleWin => !isError && gameOverCode < 0;
-}
-
-class _GameOverOverlay extends StatelessWidget {
-  const _GameOverOverlay({required this.result, required this.onExit});
-
-  final _GameOverResult result;
-  final VoidCallback onExit;
-
-  @override
-  Widget build(BuildContext context) {
-    String message;
-    if (result.isError) {
-      message = '对局异常结束';
-    } else if (result.weWon) {
-      message = '你的队伍获得了胜利';
-      if (result.doubleWin) message += '，并成功双统';
-    } else {
-      message = '你的队伍未能取得胜利';
-      if (result.doubleWin) message += '，并被对方双统';
-    }
-    return Scaffold(
-      backgroundColor: const Color(0xFF0d1820),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                '游戏结束',
-                style: TextStyle(color: Colors.white, fontSize: 24),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                message,
-                style: const TextStyle(color: Colors.white70, fontSize: 16),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 32),
-              FilledButton(
-                onPressed: onExit,
-                child: const Text('返回'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }

@@ -9,8 +9,10 @@ class SoundService {
   final AudioPlayer _player = AudioPlayer();
 
   /// 播放单个音效（异步，不阻塞）
+  ///
+  /// 资源路径与 pubspec.yaml 中的声明保持一致：assets/sounds/{basename}.wav
   void play(String basename) {
-    _player.play(AssetSource('sounds/$basename.wav')).catchError((_) {});
+    _player.play(AssetSource('assets/sounds/$basename.wav')).catchError((_) {});
   }
 
   /// 按顺序播放多个音效（异步，不阻塞）
@@ -19,7 +21,7 @@ class SoundService {
     void playAt(int i) {
       if (i >= basenames.length) return;
       _player
-          .play(AssetSource('sounds/${basenames[i]}.wav'))
+          .play(AssetSource('assets/sounds/${basenames[i]}.wav'))
           .then((_) => _player.onPlayerComplete.first)
           .then((_) => playAt(i + 1))
           .catchError((_) => playAt(i + 1));
